@@ -1,3 +1,5 @@
+# Multi threaded K-Means clustering
+
 This project implements the KMeans clustering algorithm using multiple threads. The following steps are followed:
 
 * Initialize the centroids for the predefined number of clusters.
@@ -7,4 +9,6 @@ This project implements the KMeans clustering algorithm using multiple threads. 
 
 Centroid initialization follows the k-means++ algorithm (http://ilpubs.stanford.edu:8090/778/), where the centroids positions are initialized far from each other. 
 
-As can be seen below, the multithreaded python implantation does not scale well, due to the GIL, which assigns the python interpreter to one thread at time. A good paper on the GIL can be found here.
+As can be seen below, the multithreaded python implantation does not scale well, due to the GIL, which assigns the python interpreter to a single thread. 
+
+![alt text](https://github.com/[username]/[reponame]/blob/[branch]/image.jpg?raw=true)
