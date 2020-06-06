@@ -11,4 +11,4 @@ Centroid initialization follows the k-means++ algorithm (http://ilpubs.stanford.
 
 As can be seen below, the multithreaded python implantation does not scale well, due to the GIL, which assigns the python interpreter to a single thread. 
 
-![alt text](https://github.com/[username]/[reponame]/blob/[branch]/image.jpg?raw=true)
+![alt text](https://github.com/lucacarniato/Multithreaded_K-Means_clustering/blob/master/WallClockTime.png)
