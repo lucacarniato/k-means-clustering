@@ -37,7 +37,7 @@ namespace DistanceCalculator
 
                 for (int c = 0; c < num_clusters; ++c)
                 {
-                    int cluster_position = c * 2;
+                    int cluster_position = c * num_dimensions;
                     double squared_distance = 0.0;
                     for (int d = 0; d < num_dimensions; ++d)
                     {
