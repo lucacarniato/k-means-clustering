@@ -44,7 +44,7 @@ class KMeansMultiThreaded:
 
         if external_kernel:
             current_working_dir = os.getcwd()
-            dll_name='D:\LUCA\INFO\AI\MultiThreadedKMeans\Multithreaded_K-Means_clustering\dinstance_calculator.dll'
+            dll_name='distance_calculator.dll'
             self.kernelDll = CDLL(dll_name)
             print(self.kernelDll)
 
