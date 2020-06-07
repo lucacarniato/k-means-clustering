@@ -13,8 +13,12 @@ As can be seen from the figure below, the multithreaded implementation does not 
 
 ![alt text](https://github.com/lucacarniato/Multithreaded_K-Means_clustering/blob/master/WallClockTime.png)
 
-# Improving the performance by using C++ 
+# C++ acceleration 
 
-In order to accelerate the algorithm, the distances from the centroids can be calculated in the C++ function "distance_calculator". This function takes the addresses of the numpy arrays and performs the calculations of the distances. 
+To accelerate the algorithm, the distances from the centroids can be calculated in the C++ function "distance_calculator". This function takes the addresses of the numpy arrays and performs the calculations of the distances. 
 The use of a C++ method to calculate the distance gives a considerable acceleration (10 times faster). 
 Such acceleration is also attributable to fewer memory allocations (no copies of local arrays are made between the threads). 
+
+## License
+
+This project is licensed under the MIT License - see the [LICENSE.md](LICENSE.md) file for details
