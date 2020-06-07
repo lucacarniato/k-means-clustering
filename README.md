@@ -9,6 +9,6 @@ This project implements the KMeans clustering algorithm using multiple threads. 
 
 Centroid initialization follows the k-means++ algorithm (http://ilpubs.stanford.edu:8090/778/), where the centroids positions are initialized far from each other. 
 
-As can be seen below, the multithreaded python implantation does not scale well, due to the GIL, which assigns the python interpreter to a single thread. 
+As can be seen from the figure below, the multithreaded implementation does not scale well, due to the global interpreter locker (GIL), which assigns the python interpreter to a single thread at a time. 
 
-![alt text](https://github.com/[username]/[reponame]/blob/[branch]/image.jpg?raw=true)
+![alt text](https://github.com/lucacarniato/Multithreaded_K-Means_clustering/blob/master/WallClockTime.png)
