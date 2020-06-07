@@ -44,8 +44,9 @@ class KMeansMultiThreaded:
 
         if external_kernel:
             current_working_dir = os.getcwd()
-            dll_name='distance_calculator.dll'
-            self.kernelDll = CDLL(dll_name)
+            dll_name='DistanceCalculator.dll'
+            dll_path = os.path.join(current_working_dir, dll_name)
+            self.kernelDll = CDLL(dll_path)
             print(self.kernelDll)
 
     def assign_points_to_cluster(self, num_clusters, start_index, end_index, centroids_coordinates, points, squared_distances, min_distance_index):
@@ -162,19 +163,9 @@ class KMeansMultiThreaded:
 
     def fit(self):
 
-        #text = input("prompt")  # Python 3
-        #print(text)
-        new_centroid = np.zeros(self.num_dimension)
         for iteration in range(self.num_iterations):
 
             self.compute_distances()
-            #self.assign_points_to_cluster(self.num_clusters,
-            #                              0,
-            #                              self.num_points,
-            #                              self.centroids,
-            #                              self.points,
-            #                              self.squared_distances,
-            #                              self.min_distance_index)
 
             for i in range(self.num_points):
                 # subtract the current point from previous cluster
@@ -216,7 +207,7 @@ class KMeansMultiThreaded:
 def plot_strong_scaling(n_samples, num_clusters, max_num_threads,external_kernel):
     global kMeansParallelAlgorithm
     from sklearn.datasets.samples_generator import make_blobs
-    input_points, y_values = make_blobs(n_samples=n_samples, centers=num_clusters,cluster_std=0.60, random_state=0)
+    input_points, y_values = make_blobs(n_samples=n_samples, centers=num_clusters,cluster_std=0.4, random_state=0)
 
     times = np.empty((max_num_threads,))
     for num_processes in range(1, max_num_threads + 1):
@@ -241,7 +232,7 @@ def plot_strong_scaling(n_samples, num_clusters, max_num_threads,external_kernel
 def plot_results(n_samples, num_clusters, num_processes, external_kernel):
 
     from sklearn.datasets.samples_generator import make_blobs
-    input_points, labels, true_centroids = make_blobs(n_samples=n_samples, centers=num_clusters,cluster_std=0.60, random_state=0, return_centers = True)
+    input_points, labels, true_centroids = make_blobs(n_samples=n_samples, centers=num_clusters,cluster_std=0.4, random_state=0, return_centers = True)
     kMeansParallelAlgorithm = KMeansMultiThreaded()
     kMeansParallelAlgorithm.Set(num_clusters, input_points, num_iterations=100, num_processes=num_processes, external_kernel=external_kernel)
     kMeansParallelAlgorithm.fit()
@@ -254,6 +245,6 @@ def plot_results(n_samples, num_clusters, num_processes, external_kernel):
                 marker='x', s=50, linewidths=50,color=cross_color, zorder=11, alpha=1)
 
     plt.scatter(true_centroids[:, 0], true_centroids[:, 1],
-                marker='o', s=50, linewidths=50,color=cross_color, zorder=11, alpha=1)
+                marker='+', s=50, linewidths=50,color=cross_color, zorder=11, alpha=1)
 
     plt.plot(input_points[:, 0], input_points[:, 1], 'k.', markersize=2)

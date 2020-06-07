@@ -33,11 +33,11 @@ namespace DistanceCalculator
 #pragma omp parallel for
             for (int p = 0; p < num_points; ++p)
             {
-                int point_position = p * num_dimensions;
+                const int point_position = p * num_dimensions;
 
                 for (int c = 0; c < num_clusters; ++c)
                 {
-                    int cluster_position = c * num_dimensions;
+                    const int cluster_position = c * num_dimensions;
                     double squared_distance = 0.0;
                     for (int d = 0; d < num_dimensions; ++d)
                     {

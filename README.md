@@ -12,3 +12,9 @@ Centroid initialization follows the k-means++ algorithm (http://ilpubs.stanford.
 As can be seen from the figure below, the multithreaded implementation does not scale well, due to the global interpreter locker (GIL), which assigns the python interpreter to a single thread at a time. 
 
 ![alt text](https://github.com/lucacarniato/Multithreaded_K-Means_clustering/blob/master/WallClockTime.png)
+
+# Improving the performance by using C++ 
+
+In order to accelerate the algorithm, the distances from the centroids can be calculated in the C++ function "distance_calculator". This function takes the addresses of the numpy arrays and performs the calculations of the distances. 
+The use of a C++ method to calculate the distance gives a considerable acceleration (10 times faster). 
+Such acceleration is also attributable to fewer memory allocations (no copies of local arrays are made between the threads). 
