@@ -17,7 +17,6 @@ As can be seen from the figure below, the multithreaded implementation does not 
 
 To accelerate the algorithm, the distances from the centroids can be calculated in the C++ function "distance_calculator". This function takes the addresses of the numpy arrays and performs the calculations of the distances. 
 The use of a C++ method to calculate the distance gives a considerable acceleration (10 times faster). 
-Such acceleration is also attributable to fewer memory allocations (no copies of local arrays are made between the threads). 
 
 ## License
 
