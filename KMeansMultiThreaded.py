@@ -33,6 +33,8 @@ class KMeansMultiThreaded:
         self.point_distances = np.zeros(self.num_points )
         self.clusters_size = np.zeros(self.num_clusters, dtype=np.int)
         self.clusters_sum = np.full(self.num_clusters *self.num_dimension, 0.0, dtype=np.double)
+        self.squared_distances = np.full(self.num_points, math.inf, dtype=np.double)
+        self.min_distance_index = np.full(self.num_points, -1, dtype=np.int)
 
 
         if self.num_points < self.num_clusters:
@@ -106,8 +108,6 @@ class KMeansMultiThreaded:
 
     def spawn_threads(self):
 
-        self.squared_distances = np.full(self.num_points, math.inf, dtype=np.double)
-        self.min_distance_index = np.full(self.num_points, -1, dtype=np.int)
         self.threads = []
         num_points_per_thread = math.ceil(self.num_points/self.num_processes)
         start_index = 0
@@ -139,9 +139,6 @@ class KMeansMultiThreaded:
 
         if self.external_kernel:
 
-            self.squared_distances = np.full(self.num_points, math.inf, dtype=np.double)
-            self.min_distance_index = np.full(self.num_points, -1, dtype=np.int)
-
             centroids_pointer = cast(self.centroids.ctypes.data, POINTER(c_double))
             points_pointer = cast(self.points.ctypes.data, POINTER(c_double))
             min_distance_pointer = cast(self.squared_distances.ctypes.data, POINTER(c_double))
@@ -166,6 +163,9 @@ class KMeansMultiThreaded:
     def fit(self):
 
         for iteration in range(self.num_iterations):
+
+            self.squared_distances.fill(math.inf)
+            self.min_distance_index.fill(-1)
 
             self.compute_distances()
 
