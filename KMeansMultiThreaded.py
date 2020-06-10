@@ -10,7 +10,7 @@ import os
 
 class KMeansMultiThreaded:
 
-    def Set(self, num_centroids, input_points, num_iterations, num_processes, external_kernel=False):
+    def Set(self, num_centroids, input_points, num_iterations, num_processes, external_kernel=False, random_state =None):
 
         # set scalars
         self.num_clusters = num_centroids
@@ -18,6 +18,7 @@ class KMeansMultiThreaded:
         self.num_points = input_points.shape[0]
         self.num_iterations = num_iterations
         self.num_processes = num_processes
+        self.random_state = random_state
 
         # set flat arrays (to avoid deep copies when interfacing with c++)
         self.points = np.full(self.num_points *self.num_dimension, np.inf, dtype=np.double)
@@ -71,7 +72,8 @@ class KMeansMultiThreaded:
     def initialize_centroids_k_means_pp(self):
 
         # k-means plus plus
-        random.seed(42)
+        if self.random_state:
+            random.seed(self.random_state)
         first_index = random.randint(0, self.num_points)
 
         #first centroid
@@ -204,30 +206,42 @@ class KMeansMultiThreaded:
                 print("Centroids unchanged at iteration ", iteration ," terminating...")
                 break
 
-def plot_strong_scaling(n_samples, num_clusters, max_num_threads,external_kernel):
+def plot_strong_scaling(n_samples, num_clusters, max_num_threads):
     global kMeansParallelAlgorithm
     from sklearn.datasets.samples_generator import make_blobs
-    input_points, y_values = make_blobs(n_samples=n_samples, centers=num_clusters,cluster_std=0.4, random_state=0)
+    input_points, y_values = make_blobs(n_samples=n_samples, centers=num_clusters,cluster_std=0.4, random_state=42)
 
-    times = np.empty((max_num_threads,))
+    times_multi_threaded_python = np.empty((max_num_threads,))
     for num_processes in range(1, max_num_threads + 1):
         print(num_processes)
         kMeansParallelAlgorithm = KMeansMultiThreaded()
-        kMeansParallelAlgorithm.Set(num_clusters, input_points, num_iterations = 100, num_processes = num_processes, external_kernel=external_kernel)
+        kMeansParallelAlgorithm.Set(num_clusters, input_points, num_iterations = 100, num_processes = num_processes, random_state = 42, external_kernel=False)
         from timeit import timeit
-        times[num_processes-1] = timeit("kMeansParallelAlgorithm.fit()", number=1,globals=globals())
+        times_multi_threaded_python[num_processes-1] = timeit("kMeansParallelAlgorithm.fit()", number=1,globals=globals())
+    print(times_multi_threaded_python)
 
-    print(times)
+    times_multi_threaded_external= np.empty((max_num_threads,))
+    for num_processes in range(1, max_num_threads + 1):
+        print(num_processes)
+        kMeansParallelAlgorithm = KMeansMultiThreaded()
+        kMeansParallelAlgorithm.Set(num_clusters, input_points, num_iterations = 100, num_processes = num_processes, random_state = 42, external_kernel=True)
+        from timeit import timeit
+        times_multi_threaded_external[num_processes-1] = timeit("kMeansParallelAlgorithm.fit()", number=1,globals=globals())
+    print(times_multi_threaded_external)
 
     plt.figure(figsize=(10, 4))
     ax = plt.axes()
     threads = range(1, max_num_threads + 1)
-    ax.plot(threads, times, "r--", label="Wall clock time (s)")
-    plt.title("Scaling", fontsize=14)
+    ax.plot(threads, times_multi_threaded_python, "r--", label="Python threads")
+    ax.plot(threads, times_multi_threaded_external, "b--", label="C++ external library with openMP")
+    plt.title("Strong scaling", fontsize=14)
     plt.xlabel("Number of threads", fontsize=16)
     plt.ylabel("Wall clock time (s)", fontsize=16)
     plt.xlim(1, max_num_threads)
-    plt.ylim(0, times.max())
+    plt.ylim(0, 3)
+    import matplotlib.ticker as mticker
+    plt.gca().xaxis.set_major_locator(mticker.MultipleLocator(1))
+    plt.legend(loc=2)
 
 def plot_results(n_samples, num_clusters, num_processes, external_kernel):
 
