@@ -30,7 +30,7 @@ namespace DistanceCalculator
             // set the numebr of threads
             omp_set_num_threads(num_threads);
 
-#pragma omp parallel for
+#pragma omp parallel for schedule(static,1)
             for (int p = 0; p < num_points; ++p)
             {
                 const int point_position = p * num_dimensions;
