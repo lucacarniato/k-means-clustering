@@ -234,7 +234,7 @@ def plot_strong_scaling(n_samples, num_clusters, max_num_threads):
     threads = range(1, max_num_threads + 1)
     ax.plot(threads, times_multi_threaded_python, "r--", label="Python threads")
     ax.plot(threads, times_multi_threaded_external, "b--", label="C++ external library with openMP")
-    plt.title("Strong scaling", fontsize=14)
+    plt.title("Strong scaling with " + str(n_samples) + " samples, " + str(num_clusters) + " clusters", fontsize=14)
     plt.xlabel("Number of threads", fontsize=16)
     plt.ylabel("Wall clock time (s)", fontsize=16)
     plt.xlim(1, max_num_threads)
