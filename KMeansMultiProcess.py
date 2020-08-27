@@ -1,6 +1,8 @@
 import random
 from ctypes import (c_int, c_double, CDLL, POINTER, cast)
-from threading import Thread
+from multiprocessing import Process
+from multiprocessing.sharedctypes import RawArray
+
 
 import math
 import matplotlib.pyplot as plt
@@ -8,7 +10,24 @@ import numpy as np
 import os
 
 
-class KMeansMultiThreaded:
+def assign_points_to_cluster(num_dimension, num_clusters, start_index, end_index, centroids_coordinates, points,
+                             squared_distances, min_distance_index):
+
+    for i in range(start_index, end_index):
+        point_index = i * num_dimension
+        for j in range(num_clusters):
+
+            cluster_index = j * num_dimension
+            dis = 0.0
+            for d in range(num_dimension):
+                delta = points[point_index + d] - centroids_coordinates[cluster_index + d]
+                dis += delta * delta
+
+            if dis < squared_distances[i]:
+                min_distance_index[i] = j
+                squared_distances[i] = dis
+
+class KMeansMultiProcess:
 
     def Set(self, num_centroids, input_points, num_iterations, num_processes, external_kernel=False, random_state =None):
 
@@ -33,8 +52,13 @@ class KMeansMultiThreaded:
         self.point_distances = np.zeros(self.num_points )
         self.clusters_size = np.zeros(self.num_clusters, dtype=np.int)
         self.clusters_sum = np.full(self.num_clusters *self.num_dimension, 0.0, dtype=np.double)
-        self.squared_distances = np.full(self.num_points, math.inf, dtype=np.double)
-        self.min_distance_index = np.full(self.num_points, -1, dtype=np.int)
+
+        if external_kernel:
+            self.squared_distances = np.full(self.num_points, math.inf, dtype=np.double)
+            self.min_distance_index =np.full(self.num_points, -1, dtype=np.int)
+        else:
+            self.squared_distances = RawArray('d',  np.full(self.num_points, math.inf, dtype=np.double))
+            self.min_distance_index = RawArray('i', np.full(self.num_points, -1, dtype=np.int))
 
 
         if self.num_points < self.num_clusters:
@@ -52,24 +76,10 @@ class KMeansMultiThreaded:
             self.kernelDll = CDLL(dll_path)
             print(self.kernelDll)
 
-    def assign_points_to_cluster(self, num_clusters, start_index, end_index, centroids_coordinates, points, squared_distances, min_distance_index):
-
-        if num_clusters > self.num_clusters:
-            return
-
-        for i in range(start_index, end_index):
-            point_index = i * self.num_dimension
-            for j in range(num_clusters):
-
-                cluster_index = j * self.num_dimension
-                dis = 0.0
-                for d in range(self.num_dimension):
-                    delta = points[point_index + d] - centroids_coordinates[cluster_index + d]
-                    dis += delta * delta
-
-                if dis < squared_distances[i]:
-                    min_distance_index[i] = j
-                    squared_distances[i] = dis
+    def initialize_distances_and_cluster_labeles(self):
+        for d, i in zip(self.squared_distances, self.min_distance_index):
+            d = math.inf
+            i = -1
 
     def initialize_centroids_k_means_pp(self):
 
@@ -85,9 +95,18 @@ class KMeansMultiThreaded:
 
         for cluster_index in range(1, self.num_clusters):
 
-            self.squared_distances = np.full(self.num_points, math.inf, dtype=np.double)
-            self.min_distance_index = np.full(self.num_points, -1, dtype=np.int)
-            self.assign_points_to_cluster(cluster_index, 0, self.num_points, self.centroids, self.points, self.squared_distances, self.min_distance_index)
+
+            self.initialize_distances_and_cluster_labeles()
+
+            assign_points_to_cluster(self.num_dimension,
+                                     cluster_index,
+                                     0,
+                                     self.num_points,
+                                     self.centroids,
+                                     self.points,
+                                     self.squared_distances,
+                                     self.min_distance_index)
+
             distances = np.sqrt(self.squared_distances)
             sum_distances = np.sum(distances)
             normalized_distances = distances / sum_distances
@@ -106,34 +125,36 @@ class KMeansMultiThreaded:
             for d in range(self.num_dimension):
                 self.centroids[cluster_index + d] = self.points[point_index + d]
 
-    def spawn_threads(self):
+    def spawn_process(self):
 
-        self.threads = []
+        self.processes = []
         num_points_per_thread = math.ceil(self.num_points/self.num_processes)
         start_index = 0
+        print("self.num_processes ", self.num_processes)
         for num_process in range(self.num_processes):
             end_index = start_index + num_points_per_thread
             if end_index > self.num_points:
                 end_index = self.num_points
-            self.threads.append(Thread(target=self.assign_points_to_cluster, args=(self.num_clusters,
-                                                                                   start_index,
-                                                                                   end_index,
-                                                                                   self.centroids,
-                                                                                   self.points,
-                                                                                   self.squared_distances,
-                                                                                   self.min_distance_index)))
+            self.processes.append(Process(target=assign_points_to_cluster, args=(self.num_dimension,
+                                                                                 self.num_clusters,
+                                                                                 start_index,
+                                                                                 end_index,
+                                                                                 self.centroids,
+                                                                                 self.points,
+                                                                                 self.squared_distances,
+                                                                                 self.min_distance_index)))
             start_index = end_index + 1
 
         assert(end_index == self.num_points)
 
 
-    def start_threds(self):
-        for t in self.threads:
-            t.start()
+    def start_process(self):
+        for p in self.processes:
+            p.start()
 
-    def join_threds(self):
-        for t in self.threads:
-            t.join()
+    def join_process(self):
+        for p in self.processes:
+            p.join()
 
     def compute_distances(self):
 
@@ -155,17 +176,15 @@ class KMeansMultiThreaded:
                                                min_distance_index_pointer)
         else:
             # spawn workers
-            self.spawn_threads()
-            self.start_threds()
-            self.join_threds()
-
+            self.spawn_process()
+            self.start_process()
+            self.join_process()
 
     def fit(self):
 
         for iteration in range(self.num_iterations):
 
-            self.squared_distances.fill(math.inf)
-            self.min_distance_index.fill(-1)
+            self.initialize_distances_and_cluster_labeles()
 
             self.compute_distances()
 
@@ -206,38 +225,39 @@ class KMeansMultiThreaded:
                 print("Centroids unchanged at iteration ", iteration ," terminating...")
                 break
 
-def plot_strong_scaling(n_samples, num_clusters, max_num_threads):
-    global kMeansParallelAlgorithm
+def plot_strong_scaling(n_samples, num_clusters, max_num_processes):
+    global kMeansMultiProcess
     from sklearn.datasets.samples_generator import make_blobs
     input_points, y_values = make_blobs(n_samples=n_samples, centers=num_clusters,cluster_std=0.4, random_state=42)
 
-    times_multi_threaded_python = np.empty((max_num_threads,))
-    for num_processes in range(1, max_num_threads + 1):
-        print(num_processes)
-        kMeansParallelAlgorithm = KMeansMultiThreaded()
-        kMeansParallelAlgorithm.Set(num_clusters, input_points, num_iterations = 100, num_processes = num_processes, random_state = 42, external_kernel=False)
+    times_multi_processes_python = np.empty((max_num_processes,))
+    for num_processes in range(1, max_num_processes + 1):
+        print("num_processes ", num_processes)
+        kMeansMultiProcess = KMeansMultiProcess()
+        kMeansMultiProcess.Set(num_clusters, input_points, num_iterations = 100, num_processes = num_processes, random_state = 42, external_kernel=False)
+        kMeansMultiProcess.fit()
         from timeit import timeit
-        times_multi_threaded_python[num_processes-1] = timeit("kMeansParallelAlgorithm.fit()", number=1,globals=globals())
-    print(times_multi_threaded_python)
+        times_multi_processes_python[num_processes-1] = timeit("kMeansMultiProcess.fit()", number=1,globals=globals())
+    print(times_multi_processes_python)
 
-    times_multi_threaded_external= np.empty((max_num_threads,))
-    for num_processes in range(1, max_num_threads + 1):
+    times_multi_threaded_external= np.empty((max_num_processes,))
+    for num_processes in range(1, max_num_processes + 1):
         print(num_processes)
-        kMeansParallelAlgorithm = KMeansMultiThreaded()
-        kMeansParallelAlgorithm.Set(num_clusters, input_points, num_iterations = 100, num_processes = num_processes, random_state = 42, external_kernel=True)
+        kMeansMultiProcess = KMeansMultiProcess()
+        kMeansMultiProcess.Set(num_clusters, input_points, num_iterations = 100, num_processes = num_processes, random_state = 42, external_kernel=True)
         from timeit import timeit
-        times_multi_threaded_external[num_processes-1] = timeit("kMeansParallelAlgorithm.fit()", number=1,globals=globals())
+        times_multi_threaded_external[num_processes-1] = timeit("kMeansMultiProcess.fit()", number=1,globals=globals())
     print(times_multi_threaded_external)
 
     plt.figure(figsize=(10, 4))
     ax = plt.axes()
-    threads = range(1, max_num_threads + 1)
-    ax.plot(threads, times_multi_threaded_python, "r--", label="Python threads")
+    threads = range(1, max_num_processes + 1)
+    ax.plot(threads, times_multi_processes_python, "r--", label="Python multiprocess")
     ax.plot(threads, times_multi_threaded_external, "b--", label="C++ external library with openMP")
     plt.title("Strong scaling with " + str(n_samples) + " samples, " + str(num_clusters) + " clusters", fontsize=14)
     plt.xlabel("Number of threads", fontsize=16)
     plt.ylabel("Wall clock time (s)", fontsize=16)
-    plt.xlim(1, max_num_threads)
+    plt.xlim(1, max_num_processes)
     plt.ylim(0, 3)
     import matplotlib.ticker as mticker
     plt.gca().xaxis.set_major_locator(mticker.MultipleLocator(1))
@@ -247,18 +267,18 @@ def plot_results(n_samples, num_clusters, num_processes, external_kernel):
 
     from sklearn.datasets.samples_generator import make_blobs
     input_points, labels, true_centroids = make_blobs(n_samples=n_samples, centers=num_clusters,cluster_std=0.4, random_state=0, return_centers = True)
-    kMeansParallelAlgorithm = KMeansMultiThreaded()
-    kMeansParallelAlgorithm.Set(num_clusters, input_points, num_iterations=100, num_processes=num_processes, external_kernel=external_kernel)
-    kMeansParallelAlgorithm.fit()
+    kMeansMultiProcess = KMeansMultiProcess()
+    kMeansMultiProcess.Set(num_clusters, input_points, num_iterations=100, num_processes=num_processes, external_kernel=external_kernel)
+    kMeansMultiProcess.fit()
 
     print("Plotting...")
     cross_color ='k'
-    calculated_centroids = np.reshape(kMeansParallelAlgorithm.centroids,(kMeansParallelAlgorithm.num_clusters,kMeansParallelAlgorithm.num_dimension))
+    calculated_centroids = np.reshape(kMeansMultiProcess.centroids,(kMeansMultiProcess.num_clusters,kMeansMultiProcess.num_dimension))
 
     plt.scatter(calculated_centroids[:, 0], calculated_centroids[:, 1],
                 marker='x', s=50, linewidths=50,color=cross_color, zorder=11, alpha=1)
 
     plt.scatter(true_centroids[:, 0], true_centroids[:, 1],
-                marker='+', s=50, linewidths=50,color=cross_color, zorder=11, alpha=1)
+                marker='+', s=50, linewidths=50,color='r', zorder=11, alpha=1)
 
     plt.plot(input_points[:, 0], input_points[:, 1], 'k.', markersize=2)
