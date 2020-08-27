@@ -15,6 +15,8 @@ def assign_points_to_cluster(num_dimension, num_clusters, start_index, end_index
 
     for i in range(start_index, end_index):
         point_index = i * num_dimension
+        min_distance_index[i] = -1
+        squared_distances[i] = math.inf
         for j in range(num_clusters):
 
             cluster_index = j * num_dimension
@@ -40,7 +42,11 @@ class KMeansMultiProcess:
         self.random_state = random_state
 
         # set flat arrays (to avoid deep copies when interfacing with c++)
-        self.points = np.full(self.num_points *self.num_dimension, np.inf, dtype=np.double)
+        if external_kernel:
+           self.points = np.full(self.num_points *self.num_dimension, np.inf, dtype=np.double)
+        else:
+           self.points = RawArray('d', np.full(self.num_points *self.num_dimension, np.inf, dtype=np.double))
+
         for i, point in enumerate(input_points):
             point_index = i * self.num_dimension
             for d in range(self.num_dimension):
@@ -76,11 +82,6 @@ class KMeansMultiProcess:
             self.kernelDll = CDLL(dll_path)
             print(self.kernelDll)
 
-    def initialize_distances_and_cluster_labeles(self):
-        for d, i in zip(self.squared_distances, self.min_distance_index):
-            d = math.inf
-            i = -1
-
     def initialize_centroids_k_means_pp(self):
 
         # k-means plus plus
@@ -94,9 +95,6 @@ class KMeansMultiProcess:
             self.centroids[d] = self.points[point_index + d]
 
         for cluster_index in range(1, self.num_clusters):
-
-
-            self.initialize_distances_and_cluster_labeles()
 
             assign_points_to_cluster(self.num_dimension,
                                      cluster_index,
@@ -130,7 +128,6 @@ class KMeansMultiProcess:
         self.processes = []
         num_points_per_thread = math.ceil(self.num_points/self.num_processes)
         start_index = 0
-        print("self.num_processes ", self.num_processes)
         for num_process in range(self.num_processes):
             end_index = start_index + num_points_per_thread
             if end_index > self.num_points:
@@ -184,8 +181,6 @@ class KMeansMultiProcess:
 
         for iteration in range(self.num_iterations):
 
-            self.initialize_distances_and_cluster_labeles()
-
             self.compute_distances()
 
             for i in range(self.num_points):
@@ -235,7 +230,6 @@ def plot_strong_scaling(n_samples, num_clusters, max_num_processes):
         print("num_processes ", num_processes)
         kMeansMultiProcess = KMeansMultiProcess()
         kMeansMultiProcess.Set(num_clusters, input_points, num_iterations = 100, num_processes = num_processes, random_state = 42, external_kernel=False)
-        kMeansMultiProcess.fit()
         from timeit import timeit
         times_multi_processes_python[num_processes-1] = timeit("kMeansMultiProcess.fit()", number=1,globals=globals())
     print(times_multi_processes_python)
@@ -253,12 +247,12 @@ def plot_strong_scaling(n_samples, num_clusters, max_num_processes):
     ax = plt.axes()
     threads = range(1, max_num_processes + 1)
     ax.plot(threads, times_multi_processes_python, "r--", label="Python multiprocess")
-    ax.plot(threads, times_multi_threaded_external, "b--", label="C++ external library with openMP")
+    ax.plot(threads, times_multi_threaded_external, "b--", label="C++ external library with OpenMP")
     plt.title("Strong scaling with " + str(n_samples) + " samples, " + str(num_clusters) + " clusters", fontsize=14)
-    plt.xlabel("Number of threads", fontsize=16)
+    plt.xlabel("Number of processes", fontsize=16)
     plt.ylabel("Wall clock time (s)", fontsize=16)
     plt.xlim(1, max_num_processes)
-    plt.ylim(0, 3)
+    plt.ylim(0, 12)
     import matplotlib.ticker as mticker
     plt.gca().xaxis.set_major_locator(mticker.MultipleLocator(1))
     plt.legend(loc=2)
