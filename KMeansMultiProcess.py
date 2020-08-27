@@ -252,7 +252,7 @@ def plot_strong_scaling(n_samples, num_clusters, max_num_processes):
     plt.xlabel("Number of processes", fontsize=16)
     plt.ylabel("Wall clock time (s)", fontsize=16)
     plt.xlim(1, max_num_processes)
-    plt.ylim(0, 12)
+    plt.ylim(0, 20)
     import matplotlib.ticker as mticker
     plt.gca().xaxis.set_major_locator(mticker.MultipleLocator(1))
     plt.legend(loc=2)
