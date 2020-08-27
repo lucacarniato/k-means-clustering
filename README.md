@@ -9,7 +9,7 @@ This project implements the KMeans clustering algorithm using multiple processes
 
 Centroid initialization follows the k-means++ algorithm (http://ilpubs.stanford.edu:8090/778/), where the centroids positions are initialized far from each other. 
 
-As can be seen from the figure below, the multiprocess implementation does not scale well, due to the multiple process initialization. 
+As can be seen from the figure below, the multiprocess implementation does not scale well, because large arrays between Python processes needs to be serialized into strings of bytes using pickle. 
 
 ![alt text](https://github.com/lucacarniato/Multithreaded_K-Means_clustering/blob/master/WallClockTime.png)
 
