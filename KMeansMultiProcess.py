@@ -68,7 +68,7 @@ class KMeansMultiProcess:
             for d in range(self.num_dimension):
                 self.points[point_index + d] = point[d]
 
-        self.initialize_centroids_k_means_pp()
+        self._initialize_centroids_k_means_pp()
         self.external_kernel = external_kernel
 
         if external_kernel:
@@ -78,7 +78,7 @@ class KMeansMultiProcess:
             self.kernelDll = CDLL(dll_path)
             print(self.kernelDll)
 
-    def initialize_centroids_k_means_pp(self):
+    def _initialize_centroids_k_means_pp(self):
 
         # k-means plus plus
         if self.random_state:
@@ -119,7 +119,7 @@ class KMeansMultiProcess:
             for d in range(self.num_dimension):
                 self.centroids[cluster_index + d] = self.points[point_index + d]
 
-    def spawn_process(self):
+    def _spawn_process(self):
 
         self.processes = []
         num_points_per_thread = math.ceil(self.num_points / self.num_processes)
@@ -140,15 +140,15 @@ class KMeansMultiProcess:
 
         assert (end_index == self.num_points)
 
-    def start_process(self):
+    def _start_process(self):
         for p in self.processes:
             p.start()
 
-    def join_process(self):
+    def _join_process(self):
         for p in self.processes:
             p.join()
 
-    def compute_distances(self):
+    def _compute_distances(self):
 
         if self.external_kernel:
 
@@ -168,15 +168,15 @@ class KMeansMultiProcess:
                                                min_distance_index_pointer)
         else:
             # spawn workers
-            self.spawn_process()
-            self.start_process()
-            self.join_process()
+            self._spawn_process()
+            self._start_process()
+            self._join_process()
 
     def fit(self):
 
         for iteration in range(self.num_iterations):
 
-            self.compute_distances()
+            self._compute_distances()
 
             for i in range(self.num_points):
                 # subtract the current point from previous cluster
