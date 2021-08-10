@@ -262,8 +262,7 @@ def plot_results(n_samples, num_clusters, num_processes, external_kernel):
     from sklearn.datasets.samples_generator import make_blobs
     input_points, labels, true_centroids = make_blobs(n_samples=n_samples, centers=num_clusters, cluster_std=0.4,
                                                       random_state=0, return_centers=True)
-    kMeansMultiProcess = KMeansMultiProcess()
-    kMeansMultiProcess.Set(num_clusters, input_points, num_iterations=100, num_processes=num_processes,
+    kMeansMultiProcess = KMeansMultiProcess(num_clusters, input_points, num_iterations=100, num_processes=num_processes,
                            external_kernel=external_kernel)
     kMeansMultiProcess.fit()
 
