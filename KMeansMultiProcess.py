@@ -1,12 +1,12 @@
+import math
+import os
 import random
-from ctypes import c_int, c_double, CDLL, POINTER, cast
+from ctypes import CDLL, POINTER, c_double, c_int, cast
 from multiprocessing import Process
 from multiprocessing.sharedctypes import RawArray
 
-import math
 import matplotlib.pyplot as plt
 import numpy as np
-import os
 
 
 def assign_points_to_cluster(
